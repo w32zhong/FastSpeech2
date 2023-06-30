@@ -18,7 +18,7 @@ from utils.tools import pad_1D, synth_samples, to_device
 speed = 1.3
 device = 'cuda:0'
 text_to_synthesize = """
-刚才和你们聊的很开心， 王博士如果对 Bark 的效果感兴趣可以看一下这段 Bark 生成的语音：
+刚才和你们聊的很开心， 王博士如果对 Bark 的效果感兴趣可以看下这段 Bark 生成的语音：
 全世界证券交易员，投资家的专业媒体
 股市简报 内容来自全球专业媒体。
 由六度简报团队制作，六度简报的网址是: 6dobrief.com
@@ -27,7 +27,8 @@ text_to_synthesize = """
 在葡萄牙举行的欧洲央行论坛上，
 包括美联储的 杰罗母 鲍威尔、欧洲央行的 christine lagarde 和英格兰银行的安德鲁贝利在内的央行主席都对通胀上升表示担忧。
 """
-ckpt = 'AISHELL3'
+#ckpt = 'AISHELL3'
+ckpt = 'baozi'
 
 args = argparse.Namespace(
     mode = "inference",
@@ -35,7 +36,6 @@ args = argparse.Namespace(
     duration_control = 1.1,
     pitch_control = 1.0,
     energy_control = 1.0,
-    speaker_id = 3, #218,
     restore_step = 600_000,
     preprocess_config = f"config/{ckpt}/preprocess.yaml",
     model_config = f"config/{ckpt}/model.yaml",
@@ -160,8 +160,8 @@ def synthesize(model, step, configs, vocoder, batches, control_values):
     return wav_file_paths
 
 
-def concate2mp3(outdir, wav_file_paths):
-    id = str(uuid.uuid4())
+def concate2mp3(speaker_id, outdir, wav_file_paths):
+    id = f'spk_{speaker_id}' + '--' + str(uuid.uuid4())
     wav_list_file_path = path.join(outdir, id + ".txt")
     mp3_file_path = path.join(outdir, id + ".mp3")
     silence_file_path = path.abspath('silence.wav')
@@ -184,17 +184,20 @@ vocoder = get_vocoder(model_config, device)
 
 lines = [line.strip()[:100] for line in get_clean_text_lines(text_to_synthesize)]
 
-ids = [str(uuid.uuid4()) for line in lines]
-speakers = np.array([args.speaker_id for line in lines])
-texts = [preprocess_mandarin(line, preprocess_config) for line in lines]
-text_lens = np.array([len(text) for text in texts])
-max_text_len = max(text_lens)
-texts = pad_1D(texts)
-batches = [(ids, lines, speakers, texts, text_lens, max_text_len)]
+#for speaker_id in range(1, 300):
+for speaker_id in [218]: # baozi
+    ids = [str(uuid.uuid4()) for line in lines]
+    speakers = np.array([speaker_id for line in lines])
+    texts = [preprocess_mandarin(line, preprocess_config) for line in lines]
+    text_lens = np.array([len(text) for text in texts])
+    max_text_len = max(text_lens)
+    texts = pad_1D(texts)
+    batches = [(ids, lines, speakers, texts, text_lens, max_text_len)]
 
-control_values = args.pitch_control, args.energy_control, speed
-wav_file_paths = synthesize(model, args.restore_step, configs, vocoder, batches, control_values)
+    control_values = args.pitch_control, args.energy_control, speed
+    wav_file_paths = synthesize(model, args.restore_step, configs, vocoder, batches, control_values)
 
-print(wav_file_paths)
-output = concate2mp3(train_config["path"]["result_path"], wav_file_paths)
-print('concat:', output)
+    print(wav_file_paths)
+    output = concate2mp3(speaker_id,
+        train_config["path"]["result_path"], wav_file_paths)
+    print('concat:', output)
