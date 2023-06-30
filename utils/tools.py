@@ -206,8 +206,13 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
     )
 
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
+
+    wav_file_paths = []
     for wav, basename in zip(wav_predictions, basenames):
-        wavfile.write(os.path.join(path, "{}.wav".format(basename)), sampling_rate, wav)
+        wav_file_path = os.path.join(path, "{}.wav".format(basename))
+        wavfile.write(wav_file_path, sampling_rate, wav)
+        wav_file_paths.append(wav_file_path)
+    return wav_file_paths
 
 
 def plot_mel(data, stats, titles):
